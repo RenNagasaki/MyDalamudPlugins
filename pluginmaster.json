@@ -9,7 +9,7 @@
     "TestingAssemblyVersion": "0.8.8.0",
     "RepoUrl": "https://github.com/RenNagasaki/Echokraut",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 9,
+    "DalamudApiLevel": 10,
     "DownloadLinkInstall": "https://github.com/RenNagasaki/Echokraut/releases/download/0.8.8.0/Echokraut.zip",
     "DownloadLinkTesting": "https://github.com/RenNagasaki/Echokraut/releases/download/0.8.8.0/Echokraut.zip",
     "DownloadLinkUpdate": "https://github.com/RenNagasaki/Echokraut/releases/download/0.8.8.0/Echokraut.zip",
