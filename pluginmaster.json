@@ -5,14 +5,14 @@
     "Punchline": "A TTS Plugin that breaks the silence! For self hosted TTS Services.",
     "Description": "A TTS Plugin that breaks the silence! For self hosted TTS Services. /eksettings",
     "InternalName": "Echokraut",
-    "AssemblyVersion": "0.10.5.2",
-    "TestingAssemblyVersion": "0.10.5.2",
+    "AssemblyVersion": "0.10.5.3",
+    "TestingAssemblyVersion": "0.10.5.3",
     "RepoUrl": "https://github.com/RenNagasaki/Echokraut",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 10,
-    "DownloadLinkInstall": "https://github.com/RenNagasaki/Echokraut/releases/download/0.10.5.2/Echokraut.zip",
-    "DownloadLinkTesting": "https://github.com/RenNagasaki/Echokraut/releases/download/0.10.5.2/Echokraut.zip",
-    "DownloadLinkUpdate": "https://github.com/RenNagasaki/Echokraut/releases/download/0.10.5.2/Echokraut.zip",
+    "DownloadLinkInstall": "https://github.com/RenNagasaki/Echokraut/releases/download/0.10.5.3/Echokraut.zip",
+    "DownloadLinkTesting": "https://github.com/RenNagasaki/Echokraut/releases/download/0.10.5.3/Echokraut.zip",
+    "DownloadLinkUpdate": "https://github.com/RenNagasaki/Echokraut/releases/download/0.10.5.3/Echokraut.zip",
     "IconUrl": "https://raw.githubusercontent.com/RenNagasaki/Echokraut/master/icon.png"
   }
 ]
