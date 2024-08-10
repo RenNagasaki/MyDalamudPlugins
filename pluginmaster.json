@@ -3,7 +3,7 @@
     "Author": "RenNagasaki",
     "Name": "Echokraut",
     "Punchline": "A TTS Plugin that breaks the silence! For self hosted TTS Services.",
-    "Description": "A TTS Plugin that breaks the silence! For self hosted TTS Services. /eksettings",
+    "Description": "A TTS Plugin that breaks the silence! For self hosted TTS Services. /ek",
     "InternalName": "Echokraut",
     "AssemblyVersion": "0.10.5.4",
     "TestingAssemblyVersion": "0.10.5.4",
