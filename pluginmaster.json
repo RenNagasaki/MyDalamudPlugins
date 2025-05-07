@@ -30,5 +30,21 @@
     "DownloadLinkTesting": "https://github.com/RenNagasaki/Echosync/releases/download/0.1.0.1/Echosync.zip",
     "DownloadLinkUpdate": "https://github.com/RenNagasaki/Echosync/releases/download/0.1.0.1/Echosync.zip",
     "IconUrl": "https://raw.githubusercontent.com/RenNagasaki/Echosync/master/icon.png"
+  },
+  {
+    "Author": "RenNagasaki",
+    "Name": "Echorama",
+    "Punchline": "Create your own 360 Panorama Pictures of your current ingame location.",
+    "Description": "Create your own 360 Panorama Pictures of your current ingame location.",
+    "InternalName": "Echorama",
+    "AssemblyVersion": "0.0.0.1",
+    "TestingAssemblyVersion": "0.0.0.1",
+    "RepoUrl": "https://github.com/RenNagasaki/Echorama",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 11,
+    "DownloadLinkInstall": "https://github.com/RenNagasaki/Echorama/releases/download/0.0.0.1/Echorama.zip",
+    "DownloadLinkTesting": "https://github.com/RenNagasaki/Echorama/releases/download/0.0.0.1/Echorama.zip",
+    "DownloadLinkUpdate": "https://github.com/RenNagasaki/Echorama/releases/download/0.0.0.1/Echorama.zip",
+    "IconUrl": "https://raw.githubusercontent.com/RenNagasaki/Echorama/master/icon.png"
   }
 ]
