@@ -2,8 +2,8 @@
   {
     "Author": "RenNagasaki",
     "Name": "Echokraut",
-    "Punchline": "A TTS Plugin that breaks the silence! For self hosted TTS Services.",
-    "Description": "A TTS Plugin that breaks the silence! For self hosted TTS Services. /ek",
+    "Punchline": "A TTS Plugin that breaks the silence! For self hosted AllTalk instance.",
+    "Description": "A TTS Plugin that breaks the silence! For self hosted AllTalk instance. /ek",
     "InternalName": "Echokraut",
     "AssemblyVersion": "0.12.1.7",
     "TestingAssemblyVersion": "0.12.1.7",
