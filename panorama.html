@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Echotools • Panorama Viewer</title>
+  <meta name="description" content="Panorama Viewer – Echotools style, with the exact site header, footer, and background." />
+  <style>
+    /* === Echotools site variables (from your index.html) === */
+    :root{
+      --bg0:#0c1020; /* starry night */
+      --bg1:#0f1428; /* deep blue */
+      --ink:#eef1f5; --ink-muted:#aab3c5;
+      --gold:#e0c48a; --gold-2:#b89452;
+      --aether:#77d1ff; --aether-2:#3fb4f0;
+      --border:#24304f; --card:#12172c; --focus:#ffd166;
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg0:#f6f8ff; --bg1:#e9efff; --ink:#0d1020; --ink-muted:#445069; --gold:#9a7b3d; --gold-2:#87662a; --aether:#156d9c; --aether-2:#0e5478; --border:#d9e1ff; --card:#ffffff; --focus:#6236ff; }
+    }
+    *{box-sizing:border-box}
+    html:focus-within{scroll-behavior:smooth}
+    html,body{margin:0}
+    body{color:var(--ink);font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial}
+
+    /* === Exact background from your site === */
+    body::before{
+      content:"";position:fixed;inset:0;z-index:-2;/* use your asset path */
+      background:url("Background2.png") center/cover no-repeat fixed;
+    }
+    body::after{ /* filigree frame */
+      content:"";position:fixed;inset:16px;z-index:-1;border:1px solid var(--gold-2);border-radius:18px;box-shadow:0 0 0 1px rgba(255,255,255,.04) inset, 0 0 40px rgba(63,180,240,.08) inset;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' opacity='0.08'%3E%3Cg fill='none' stroke='%23e0c48a' stroke-width='0.6'%3E%3Cpath d='M200 20a180 180 0 1 1 0 360 180 180 0 0 1 0-360z'/%3E%3Cpath d='M32 200h336M200 32v336'/%3E%3C/g%3E%3C/svg%3E");
+      background-size:cover;background-repeat:no-repeat;border-image:linear-gradient(90deg, var(--gold), transparent 30%, transparent 70%, var(--gold)) 1;
+    }
+
+    .container{max-width:1150px;margin-inline:auto;padding:1.25rem}
+    a{color:var(--aether);text-decoration:none}
+    a:hover{color:var(--aether-2)}
+
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .skip{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+    .skip:focus{left:1rem;top:1rem;width:auto;height:auto;z-index:1000;background:var(--card);color:var(--ink);padding:.5rem .75rem;border:2px solid var(--focus);border-radius:.5rem}
+
+    /* === Exact header from your site === */
+    header{position:sticky;top:0;background:linear-gradient(180deg, rgba(12,16,32,.8), rgba(12,16,32,.2));backdrop-filter:blur(8px) saturate(1.2);border-bottom:1px solid var(--border)}
+    .brand{display:flex;gap:.75rem;align-items:center}
+    .crest{inline-size:40px;block-size:40px;border-radius:10px;border:1px solid var(--gold-2);background:
+      radial-gradient(70% 70% at 30% 30%, var(--aether), transparent 70%),
+      linear-gradient(135deg, var(--aether-2), transparent 60%);
+      box-shadow:0 0 0 1px rgba(255,255,255,.05) inset
+    }
+    h1.logo{font-size:1.8rem;letter-spacing:.04em;margin:0;font-weight:800;color:var(--gold)}
+    .subtitle{color:var(--ink-muted);font-size:.95rem}
+
+    /* === Exact footer from your site === */
+    footer{color:var(--ink-muted);border-top:1px solid var(--border);padding-block:2rem;margin-top:1.5rem}
+    footer a{color:var(--gold)}
+
+    /* === Viewer layout (blends seamlessly into site) === */
+    .viewer-wrap{margin:1.25rem 0}
+    .viewer{position:relative;width:min(1100px,95vw);height:min(70vh,75vw);background: var(--card);border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .ui{position:absolute;inset:0;pointer-events:none}
+    .ui .top, .ui .bottom{position:absolute;display:flex;gap:.5rem;align-items:center}
+    .ui .top{top:.75rem;left:.75rem;right:.75rem;justify-content:space-between}
+    .ui .bottom{bottom:.75rem;left:50%;transform:translateX(-50%)}
+
+    /* Controls styled to match site */
+    .btn-icon{pointer-events:auto;cursor:pointer;border:1px solid var(--border);background:#0b1226;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+    .btn-icon:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .btn-icon svg{width:18px;height:18px;fill:var(--gold)}
+
+    .chip{pointer-events:auto;background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--card);border:1px solid var(--border);color:var(--ink);padding:.45rem .7rem;border-radius:999px;display:inline-flex;gap:.5rem;align-items:center}
+    .brand-badge{font-weight:800;letter-spacing:.03em;color:var(--gold)}
+    .muted{color:var(--ink-muted)}
+
+    .fov{pointer-events:auto;appearance:none;width:360px;height:12px;background:#0b1226;border-radius:999px;outline:none;border:1px solid var(--border)}
+    .fov::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px rgba(0,0,0,.6)}
+    .fov::-moz-range-thumb{width:18px;height:18px;border:none;border-radius:50%;background:var(--gold)}
+
+    .hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(12,16,32,.92);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:16px;padding:1rem 1.25rem;display:flex;gap:.75rem;align-items:center;color:var(--ink)}
+    .hint svg{width:18px;height:18px;fill:var(--gold)}
+    .viewer.dragging{cursor:grabbing}
+    .viewer:not(.dragging){cursor:grab}
+
+    .drop{position:absolute;inset:0;border:2px dashed var(--border);border-radius:16px;display:none;place-items:center;background:rgba(11,18,38,.45)}
+    .drop.show{display:grid}
+  /* Sample toolbar (under header, above description+viewer) */
+    .sample-toolbar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.85rem 0 1.1rem}
+    .btn-sample{appearance:none;cursor:pointer;border:1px solid var(--border);background:#0b1226;color:var(--ink);padding:.5rem .85rem;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+    .btn-sample:hover,.btn-sample:focus-visible{background:#0e1730;outline:3px solid var(--focus);outline-offset:2px}
+    .btn-sample .sub{color:var(--ink-muted);font-size:.85em;margin-left:.4rem}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem .9rem;border-radius:.75rem;border:1px solid var(--gold-2);background:linear-gradient(180deg, rgba(224,196,138,.12), rgba(224,196,138,.04));color:var(--gold);font-weight:700}
+    .btn:hover{border-color:var(--gold);color:#1a1202;background:linear-gradient(180deg, rgba(224,196,138,.9), rgba(224,196,138,.5))}
+  </style>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header role="banner">
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-block:.75rem">
+    <div class="brand">
+      <img class="icon icon-large" src="Echotools.png" aria-hidden="true" />
+      <div>
+        <h1 class="logo">Echotools</h1>
+        <p class="subtitle">Immersion increasing plugins – inspired by Eorzea's nights ✨</p>
+      </div>
+    </div>
+      <a class="btn" href="https://echotools.cloud" target="_self" rel="noopener">Back to main</a>
+  </div>
+</header>
+
+<main id="main" class="container" role="main" tabindex="-1">
+  <div class="sample-toolbar" role="region" aria-label="Sample panoramas">
+    <button class="btn" id="sample1" data-src="/panoramas/Example1.webp" aria-label="Load sample panorama 1">Load sample #1</button>
+    <button class="btn" id="sample2" data-src="/panoramas/Example2.webp" aria-label="Load sample panorama 2">Load sample #2</button>
+    <button class="btn" id="sample3" data-src="/panoramas/Example3.webp" aria-label="Load sample panorama 2">Load sample #3</button>
+  </div>
+  <h2 style="margin:.75rem 0 0">Panorama viewer</h2>
+  <p class="subtitle" style="margin:.25rem 0 1rem">Drop a 2:1 equirectangular image (JPG/WEBP). Keyboard: Arrows pan, +/- zoom, A autorotate, F fullscreen, H help.</p>
+
+  <section class="viewer-wrap" aria-label="Panorama viewer">
+    <div class="viewer" id="pano" data-panorama data-src="" role="application" aria-label="Panorama viewer">
+      <!-- canvas injected -->
+      <div class="ui" role="region" aria-label="Controls">
+        <div class="top">
+          <div class="chip" role="status" aria-live="polite"><span class="brand-badge">Echotools</span><span class="muted" id="label">— ready</span></div>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <button class="btn-icon" id="fs" title="Fullscreen" aria-label="Fullscreen">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5v2H6v3H4Zm10-5h5v5h-2V6h-3V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3Z"/></svg>
+            </button>
+            <button class="btn-icon" id="auto" title="Toggle auto-rotate" aria-label="Toggle auto-rotate" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v3l4-4-4-4v3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7Z"/></svg>
+            </button>
+            <button class="btn-icon" id="zoomIn" title="Zoom in" aria-label="Zoom in">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 11V6h2v5h5v2h-5v5h-2v-5H6v-2h5Z"/></svg>
+            </button>
+            <button class="btn-icon" id="zoomOut" title="Zoom out" aria-label="Zoom out">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v2H6z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="bottom">
+          <label for="fov" class="sr-only">Field of view</label>
+          <input class="fov" id="fov" type="range" min="30" max="100" value="75" step="1" title="Field of view" aria-label="Field of view">
+        </div>
+      </div>
+
+      <div class="hint" id="hint" role="dialog" aria-modal="false" aria-labelledby="hintTitle">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm1 14v2h-2v-2h2Zm0-10v8h-2V6h2Z"/></svg>
+        <div>
+          <div id="hintTitle" style="font-weight:700">No image loaded yet</div>
+          <div class="muted">Drop an equirectangular 360° image here or use the file button above.</div>
+          <div class="muted" style="margin-top:.25rem;font-size:.9em;opacity:.95">Keys: Arrow = pan, +/- = zoom, A = auto-rotate, F = fullscreen, H = help</div>
+        </div>
+      </div>
+
+      <div class="drop" id="drop" aria-hidden="true"><div class="chip">Drop image here …</div></div>
+    </div>
+  </section>
+
+  <footer role="contentinfo" style="margin-top:1.25rem">
+    <small>© <span id="year"></span> Ren Nagasaki • Echotools</small>
+  </footer>
+</main>
+
+<!-- Three.js -->
+<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+<script>
+(function(){
+  const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+  class PanoramaViewer{
+    constructor(container, opts={}){
+      this.el = container;
+      this.opts = Object.assign({ src: container?.dataset?.src||"", fov:75, minFov:30, maxFov:100, yaw:0, pitch:0, minPitch:-85, maxPitch:85, autorotate:false, autorotateSpeed:3 }, opts);
+      this._w = this.el.clientWidth; this._h = this.el.clientHeight;
+      this.scene = new THREE.Scene();
+      this.camera = new THREE.PerspectiveCamera(this.opts.fov, this._w/this._h, 0.1, 1100);
+      this.renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+      this.renderer.setSize(this._w, this._h);
+      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      this.renderer.setClearColor(0x000000, 0); // transparent to show site background
+      this.el.appendChild(this.renderer.domElement);
+
+      const geom = new THREE.SphereGeometry(500, 64, 48); geom.scale(-1,1,1);
+      this.material = new THREE.MeshBasicMaterial({color:0xffffff});
+      this.mesh = new THREE.Mesh(geom, this.material);
+      this.scene.add(this.mesh);
+
+      this.state = {drag:false, x:0, y:0};
+      this._last = performance.now();
+      this._autorotate = !!this.opts.autorotate;
+
+      this._bind();
+      if(this.opts.src) this.load(this.opts.src);
+      this._loop = this._loop.bind(this);
+      requestAnimationFrame(this._loop);
+    }
+
+    _bind(){
+      const el=this.el;
+      const onDown=(e)=>{ this.state.drag=true; el.classList.add('dragging'); this.state.x=e.clientX||e.touches?.[0]?.clientX; this.state.y=e.clientY||e.touches?.[0]?.clientY; };
+      const onMove=(e)=>{ if(!this.state.drag) return; const cx=e.clientX||e.touches?.[0]?.clientX; const cy=e.clientY||e.touches?.[0]?.clientY; const dx=cx-this.state.x; const dy=cy-this.state.y; this.state.x=cx; this.state.y=cy; this.opts.yaw=(this.opts.yaw-dx*0.12)%360; this.opts.pitch=Math.max(this.opts.minPitch, Math.min(this.opts.maxPitch, this.opts.pitch-dy*0.12)); };
+      const onUp=()=>{ this.state.drag=false; el.classList.remove('dragging'); };
+      el.addEventListener('mousedown', onDown); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+      el.addEventListener('touchstart', onDown, {passive:true}); el.addEventListener('touchmove', onMove, {passive:true}); el.addEventListener('touchend', onUp, {passive:true});
+      el.addEventListener('wheel', (e)=>{ e.preventDefault(); const delta=Math.sign(e.deltaY); this.setFov(this.camera.fov + delta*2); }, {passive:false});
+      window.addEventListener('resize', ()=>{ this._w=this.el.clientWidth; this._h=this.el.clientHeight; this.camera.aspect=this._w/this._h; this.camera.updateProjectionMatrix(); this.renderer.setSize(this._w,this._h); });
+
+      this.ui={ fov:document.getElementById('fov'), auto:document.getElementById('auto'), fs:document.getElementById('fs'), zoomIn:document.getElementById('zoomIn'), zoomOut:document.getElementById('zoomOut'), pick:document.getElementById('pick'), file:document.getElementById('file'), label:document.getElementById('label'), hint:document.getElementById('hint'), drop:document.getElementById('drop') };
+      this.ui.fov.addEventListener('input', ()=> this.setFov(parseFloat(this.ui.fov.value)));
+      this.ui.auto.addEventListener('click', ()=>{ this._autorotate=!this._autorotate; this.ui.auto.setAttribute('aria-pressed', String(this._autorotate)); this._setLabel(this._autorotate? 'Auto‑rotate: on' : 'Auto‑rotate: off'); });
+      this.ui.fs.addEventListener('click', ()=>{ if(!document.fullscreenElement) this.el.requestFullscreen?.(); else document.exitFullscreen?.(); });
+      this.ui.zoomIn.addEventListener('click', ()=> this.setFov(this.camera.fov-5));
+      this.ui.zoomOut.addEventListener('click', ()=> this.setFov(this.camera.fov+5));
+      
+      const drop=this.ui.drop; const show=(s)=> drop.classList.toggle('show', s);
+      ['dragenter','dragover'].forEach(ev=> el.addEventListener(ev,(e)=>{e.preventDefault(); show(true);}));
+      ;['dragleave','dragend','drop'].forEach(ev=> el.addEventListener(ev,(e)=>{e.preventDefault(); show(false);}));
+      el.addEventListener('drop',(e)=>{ const file=e.dataTransfer?.files?.[0]; if(file&&file.type.startsWith('image/')){ const url=URL.createObjectURL(file); this.load(url, ()=> URL.revokeObjectURL(url)); }});
+
+      // Keyboard
+      this.el.tabIndex=0;
+      this.el.addEventListener('keydown',(e)=>{
+        const stepYaw=5, stepPitch=3;
+        switch(e.key){
+          case 'ArrowLeft': this.opts.yaw=(this.opts.yaw-stepYaw)%360; e.preventDefault(); break;
+          case 'ArrowRight': this.opts.yaw=(this.opts.yaw+stepYaw)%360; e.preventDefault(); break;
+          case 'ArrowUp': this.opts.pitch=Math.max(this.opts.minPitch, Math.min(this.opts.maxPitch, this.opts.pitch-stepPitch)); e.preventDefault(); break;
+          case 'ArrowDown': this.opts.pitch=Math.max(this.opts.minPitch, Math.min(this.opts.maxPitch, this.opts.pitch+stepPitch)); e.preventDefault(); break;
+          case '+': case '=': this.setFov(this.camera.fov-3); e.preventDefault(); break;
+          case '-': case '_': this.setFov(this.camera.fov+3); e.preventDefault(); break;
+          case 'a': case 'A': this.ui.auto.click(); e.preventDefault(); break;
+          case 'f': case 'F': this.ui.fs.click(); e.preventDefault(); break;
+          case 'h': case 'H': this.ui.hint.style.display = (this.ui.hint.style.display==='none')? 'flex':'none'; e.preventDefault(); break;
+        }
+      });
+      this.setFov(this.opts.fov);
+    }
+
+    setFov(v){ this.camera.fov=Math.max(this.opts.minFov, Math.min(this.opts.maxFov, v)); this.camera.updateProjectionMatrix(); if(this.ui?.fov) this.ui.fov.value=String(Math.round(this.camera.fov)); this._setLabel(`FOV: ${Math.round(this.camera.fov)}°`); }
+    _applyOrientation(){ const phi=THREE.MathUtils.degToRad(90-this.opts.pitch); const theta=THREE.MathUtils.degToRad(this.opts.yaw); const target=new THREE.Vector3().setFromSpherical(new THREE.Spherical(1,phi,theta)); this.camera.lookAt(target); }
+    _loop(now){ const dt=(now-this._last)/1000; this._last=now; if(this._autorotate && !this.state.drag){ this.opts.yaw=(this.opts.yaw - this.opts.autorotateSpeed*dt*60)%360; } this._applyOrientation(); this.renderer.render(this.scene,this.camera); requestAnimationFrame(this._loop); }
+    load(src, cb){ const loader=new THREE.TextureLoader(); this._setLabel('Loading…'); loader.load(src,(tex)=>{ tex.colorSpace=THREE.SRGBColorSpace; this.material.map=tex; this.material.needsUpdate=true; if(this.ui?.hint) this.ui.hint.style.display='none'; this._setLabel('Loaded'); if(typeof cb==='function') cb(); }, undefined, (err)=>{ console.error(err); this._setLabel('Failed to load'); }); }
+    _setLabel(text){ if(this.ui?.label) this.ui.label.textContent='— '+text; }
+  }
+
+  // Auto-init
+  function init(){ document.querySelectorAll('[data-panorama]').forEach(el=>{ if(el.__pv) return; el.__pv = new PanoramaViewer(el, { src: el.dataset.src||'' }); }); }
+  window.initPanoramaViewers = init; init();
+})();
+</script>
+
+<script>(function(){
+  function getPV(){ const el=document.getElementById('pano'); return el && el.__pv; }
+  function bindSample(id){
+    const btn=document.getElementById(id);
+    if(!btn) return;
+    btn.addEventListener('click', ()=>{
+      const url = btn.getAttribute('data-src');
+      let pv = getPV();
+      if(!pv && window.initPanoramaViewers){ window.initPanoramaViewers(); pv = getPV(); }
+      if(pv && url){ pv.load(url); }
+    });
+  }
+  bindSample('sample1');
+  bindSample('sample2');
+  bindSample('sample3');
+})();</script>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
