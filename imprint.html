@@ -1,0 +1,68 @@
+<!-- ==========================
+  File: imprint.html (English‑only, compliant with German TMG/MStV; fill placeholders)
+========================== -->
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Imprint – Echotools</title>
+    <style>
+        :root{ --bg:#0c1020; --ink:#eef1f5; --muted:#aab3c5; --gold:#e0c48a; --border:#24304f; }
+        body{ margin:0; font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; color:var(--ink); background:linear-gradient(180deg,#0f1428,#0c1020); }
+        .wrap{ max-width:900px; margin:0 auto; padding:2rem; }
+        h1{ color:var(--gold); margin-top:0 }
+        section{ border:1px solid var(--border); border-radius:14px; padding:1rem 1.25rem; background:#12172c; box-shadow:0 10px 30px rgba(0,0,0,.25); margin-bottom:1rem }
+        a{ color:#77d1ff; }
+        footer{ color:var(--muted); text-align:center; padding:2rem; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header><h1>Imprint (Legal Disclosure)</h1></header>
+
+    <section aria-labelledby="provider">
+        <h2 id="provider">Service provider (§ 5 TMG)</h2>
+        <p><strong>YOUR NAME</strong><br>
+            YOUR STREET &amp; NUMBER<br>
+            YOUR POSTCODE &amp; CITY<br>
+            Germany</p>
+        <p>Email: <a href="mailto:YOUR_EMAIL">YOUR_EMAIL</a><br>
+            Phone: YOUR_PHONE (optional)</p>
+    </section>
+
+    <section aria-labelledby="vat">
+        <h2 id="vat">VAT ID (§ 27a UStG)</h2>
+        <p>VAT Identification Number: <strong>YOUR_VAT_ID</strong> (leave blank if not applicable).</p>
+    </section>
+
+    <section aria-labelledby="editorial">
+        <h2 id="editorial">Editorially responsible (§ 18 MStV)</h2>
+        <p><strong>YOUR NAME</strong><br>
+            YOUR STREET &amp; NUMBER<br>
+            YOUR POSTCODE &amp; CITY</p>
+    </section>
+
+    <section aria-labelledby="odr">
+        <h2 id="odr">EU online dispute resolution (Art. 14 ODR‑VO)</h2>
+        <p>The European Commission provides a platform for online dispute resolution (ODR):
+            <a href="https://ec.europa.eu/consumers/odr/" rel="noopener" target="_blank">ec.europa.eu/consumers/odr/</a>.</p>
+    </section>
+
+    <section aria-labelledby="consumer">
+        <h2 id="consumer">Consumer dispute resolution (§ 36 VSBG)</h2>
+        <p>We are neither willing nor obliged to participate in dispute settlement proceedings before a consumer arbitration board.</p>
+    </section>
+
+    <section aria-labelledby="liability">
+        <h2 id="liability">Liability for content & links</h2>
+        <p>We are responsible for our own content on these pages according to general laws. We are not obligated to monitor transmitted or stored external information or to investigate circumstances indicating illegal activity. Obligations to remove or block the use of information under general law remain unaffected. Liability in this respect is only possible from the time of knowledge of a specific infringement. Upon becoming aware of such infringements, we will remove the content immediately.</p>
+        <p>Our site contains links to external websites of third parties, on whose contents we have no influence. Therefore, we cannot assume any liability for these external contents. The respective provider or operator of the pages is always responsible for the content of the linked pages.</p>
+    </section>
+
+    <p><a href="index.html">Back to start page</a></p>
+    <footer>© <span id="y"></span> YOUR NAME • Echotools</footer>
+</div>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body>
+</html>
