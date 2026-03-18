@@ -26,7 +26,7 @@
     "TestingAssemblyVersion": "0.10.0.0",
     "RepoUrl": "https://github.com/RenNagasaki/Echosync",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 13,
+    "DalamudApiLevel": 14,
     "DownloadLinkInstall": "https://github.com/RenNagasaki/Echosync/releases/download/0.10.0.0/Echosync.zip",
     "DownloadLinkTesting": "https://github.com/RenNagasaki/Echosync/releases/download/0.10.0.0/Echosync.zip",
     "DownloadLinkUpdate": "https://github.com/RenNagasaki/Echosync/releases/download/0.10.0.0/Echosync.zip",
