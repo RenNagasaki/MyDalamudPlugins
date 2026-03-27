@@ -28,5 +28,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/RenNagasaki/echotools-website:latest
-            ghcr.io/RenNagasaki/echotools-website:${{ github.sha }}
+            ghcr.io/rennagasaki/echotools-website:latest
+            ghcr.io/rennagasaki/echotools-website:${{ github.sha }}
