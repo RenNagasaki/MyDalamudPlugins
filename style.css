@@ -17,10 +17,10 @@
 }
 
 .icon-middle {
-  inline-size: 48px;   /* Breite */
-  block-size: 48px;    /* Höhe */
+  inline-size: 56px;   /* Breite */
+  block-size: 56px;    /* Höhe */
   font-size: 2.0rem;   /* Schrift/Icon-Symbol entsprechend größer */
-  border-radius: 10px; /* optional etwas größere Rundung */
+  border-radius: 12px; /* optional etwas größere Rundung */
 }
 
 .icon-large {
