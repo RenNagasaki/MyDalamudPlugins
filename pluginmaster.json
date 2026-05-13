@@ -5,7 +5,7 @@
     "Punchline": "A TTS Plugin that breaks the silence! For self hosted AllTalk instance.",
     "Description": "A TTS Plugin that breaks the silence! For self hosted AllTalk instance. /ek",
     "InternalName": "Echokraut",
-    "AssemblyVersion": "0.18.0.6",
+    "AssemblyVersion": "0.19.0.0",
     "TestingAssemblyVersion": "0.19.0.0",
     "RepoUrl": "https://github.com/RenNagasaki/Echokraut",
     "ApplicableVersion": "any",
