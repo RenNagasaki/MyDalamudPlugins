@@ -1,0 +1,768 @@
+<!-- ==========================
+  File: plugintests.html — interactive tester checklists, one tab per plugin.
+  Data: pluginmaster.json (plugin list + versions) and Testing/checklist.json
+        in each plugin repo, read at the version tag.
+  No server, no login: progress lives in the tester's localStorage.
+========================== -->
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Echotools - Test Checklists</title>
+    <meta name="description" content="Echotools – Interactive test checklists for every plugin version." />
+    <style>
+        /* === FFXIV‑inspired theme (no copyrighted assets) === */
+        :root{
+            --bg0:#0c1020; /* starry night */
+            --bg1:#0f1428; /* deep blue */
+            --ink:#eef1f5; --ink-muted:#aab3c5;
+            --gold:#e0c48a; --gold-2:#b89452;
+            --aether:#77d1ff; --aether-2:#3fb4f0;
+            --border:#24304f; --card:#12172c; --focus:#ffd166;
+            /* checklist states */
+            --ok:#7fd18a; --fail:#f0736a; --skip:#8a94a6;
+            --mono:ui-monospace,"Cascadia Mono",Consolas,"Liberation Mono",monospace;
+        }
+        @media (prefers-color-scheme: light){
+            :root{ --bg0:#f6f8ff; --bg1:#e9efff; --ink:#0d1020; --ink-muted:#445069; --gold:#9a7b3d; --gold-2:#87662a; --aether:#156d9c; --aether-2:#0e5478; --border:#d9e1ff; --card:#ffffff; --focus:#6236ff;
+                --ok:#2f8f42; --fail:#c23b31; --skip:#5d6779; }
+        }
+        *{box-sizing:border-box}
+        html:focus-within{scroll-behavior:smooth}
+        html,body{margin:0}
+        body{color:var(--ink);font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial}
+
+        /* Background: gradients + subtle ornament overlay (data URI, license‑free) */
+        body::before{
+            content:"";
+            position:fixed;
+            inset:0;
+            z-index:-2;
+            background: url("Background2.png") center/cover no-repeat fixed;
+        }
+        body::after{ /* filigree frame */
+            content:"";position:fixed;inset:16px;z-index:-1;border:1px solid var(--gold-2);border-radius:18px;box-shadow:0 0 0 1px rgba(255,255,255,.04) inset, 0 0 40px rgba(63,180,240,.08) inset;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' opacity='0.08'%3E%3Cg fill='none' stroke='%23e0c48a' stroke-width='0.6'%3E%3Cpath d='M200 20a180 180 0 1 1 0 360 180 180 0 0 1 0-360z'/%3E%3Cpath d='M32 200h336M200 32v336'/%3E%3C/g%3E%3C/svg%3E");
+            background-size:cover;background-repeat:no-repeat;border-image:linear-gradient(90deg, var(--gold), transparent 30%, transparent 70%, var(--gold)) 1;
+        }
+
+        .container{max-width:1150px;margin-inline:auto;padding:1.25rem}
+        a{color:var(--aether);text-decoration:none}
+        a:hover{color:var(--aether-2)}
+
+        header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg, rgba(12,16,32,.8), rgba(12,16,32,.2));backdrop-filter:blur(8px) saturate(1.2);border-bottom:1px solid var(--border)}
+        .brand{display:flex;gap:.75rem;align-items:center}
+        h1.logo{font-size:1.8rem;letter-spacing:.04em;margin:0;font-weight:800;color:var(--gold)}
+        .subtitle{color:var(--ink-muted);font-size:.95rem;margin:.25rem 0 0}
+        .icon{inline-size:28px;block-size:28px;border-radius:8px;border:1px solid var(--border);background:#0b1226;display:inline-grid;place-items:center;font-size:1.1rem;color:var(--gold)}
+        .icon-large{inline-size:64px;block-size:64px;font-size:2.4rem;border-radius:12px}
+
+        .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem .9rem;border-radius:.75rem;border:1px solid var(--gold-2);background:linear-gradient(180deg, rgba(224,196,138,.12), rgba(224,196,138,.04));color:var(--gold);font-weight:700;cursor:pointer;font-family:inherit;font-size:.95rem}
+        .btn:hover{border-color:var(--gold);color:#1a1202;background:linear-gradient(180deg, rgba(224,196,138,.9), rgba(224,196,138,.5))}
+        .btn.quiet{border-color:var(--border);color:var(--ink-muted);background:transparent;font-weight:600}
+        .btn.quiet:hover{border-color:var(--gold-2);color:var(--gold);background:rgba(224,196,138,.08)}
+        .btn:disabled{opacity:.45;cursor:not-allowed}
+
+        footer{color:var(--ink-muted);border-top:1px solid var(--border);padding-block:2rem;margin-top:1.5rem}
+        footer a{color:var(--gold)}
+
+        input[type=text],select,textarea{
+            background:rgba(0,0,0,.22);color:var(--ink);
+            border:1px solid var(--border);border-radius:.6rem;
+            padding:.45rem .6rem;font:inherit;font-size:.95rem;
+        }
+        @media (prefers-color-scheme: light){
+            input[type=text],select,textarea{background:#fff}
+            header{background:linear-gradient(180deg, rgba(246,248,255,.9), rgba(246,248,255,.4))}
+        }
+        input[type=text]:focus,select:focus,textarea:focus{outline:2px solid var(--focus);outline-offset:-1px}
+
+        /* ---------- tester identity ---------- */
+        .idbar{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;
+            margin-block:1.25rem;padding:.75rem 1rem;
+            border:1px solid var(--border);border-radius:14px;
+            background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--card);
+        }
+        .idbar label{color:var(--ink-muted);font-size:.9rem;font-weight:600}
+        .idbar .note{color:var(--ink-muted);font-size:.85rem}
+        .idbar .who{margin-left:auto;color:var(--ink-muted);font-size:.78rem;font-family:var(--mono);opacity:.75}
+
+        /* ---------- tabs ---------- */
+        nav.tabs{display:flex;gap:.25rem;flex-wrap:wrap}
+        .tab{background:transparent;color:var(--ink-muted);border:1px solid transparent;border-bottom:none;
+            padding:.55rem 1rem;border-radius:12px 12px 0 0;cursor:pointer;font:inherit;font-size:.95rem;font-weight:600}
+        .tab:hover{color:var(--ink);background:rgba(255,255,255,.04)}
+        .tab[aria-selected=true]{background:var(--card);color:var(--gold);border-color:var(--border)}
+        .tab .dot{display:inline-block;inline-size:8px;block-size:8px;border-radius:50%;margin-left:.5rem;vertical-align:middle;background:var(--ink-muted);opacity:.5}
+        .tab .dot.done{background:var(--ok);opacity:1}
+        .tab .dot.fail{background:var(--fail);opacity:1}
+        .tab .dot.part{background:var(--gold);opacity:1}
+
+        /* ---------- panel ---------- */
+        .panel{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--card);
+            border:1px solid var(--border);border-radius:0 16px 16px 16px;padding:1.25rem;
+            box-shadow:0 10px 30px rgba(0,0,0,.25)}
+        .toolbar{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+        .toolbar .grow{flex:1}
+        .toolbar label{color:var(--ink-muted);font-size:.9rem;font-weight:600}
+        .chip{font-size:.75rem;padding:.15rem .6rem;border-radius:999px;border:1px solid var(--border);color:var(--ink-muted);font-weight:700;letter-spacing:.03em}
+        .chip.testing{border-color:var(--aether);color:var(--aether)}
+        .chip.stable{border-color:var(--ok);color:var(--ok)}
+
+        /* ---------- progress ---------- */
+        .progress{margin-block:1rem .25rem}
+        .bar{block-size:8px;background:rgba(0,0,0,.28);border-radius:999px;overflow:hidden;display:flex}
+        .bar i{display:block;block-size:100%;transition:inline-size .25s}
+        .bar i.ok{background:var(--ok)} .bar i.fail{background:var(--fail)} .bar i.skip{background:var(--skip)}
+        .counts{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.5rem;font-size:.88rem;color:var(--ink-muted)}
+        .counts b{color:var(--ink);font-weight:800}
+        .counts .k-ok b{color:var(--ok)} .counts .k-fail b{color:var(--fail)} .counts .k-skip b{color:var(--skip)}
+
+        /* ---------- checklist ---------- */
+        .component{margin-top:1.5rem}
+        .component > h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);margin:0 0 .6rem;font-weight:800}
+        details.section{border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.14);margin-bottom:.6rem;overflow:hidden}
+        @media (prefers-color-scheme: light){ details.section{background:rgba(0,0,0,.03)} }
+        details.section > summary{cursor:pointer;padding:.65rem .9rem;list-style:none;display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:.95rem}
+        details.section > summary::-webkit-details-marker{display:none}
+        details.section > summary::before{content:"▸";color:var(--gold-2);font-size:.8rem;transition:transform .15s}
+        details.section[open] > summary::before{transform:rotate(90deg)}
+        details.section > summary:hover{background:rgba(255,255,255,.04)}
+        summary .stat{margin-left:auto;font-weight:600;font-size:.78rem;color:var(--ink-muted);font-family:var(--mono)}
+
+        .item{border-top:1px solid var(--border);padding:.7rem .9rem;display:flex;gap:.75rem;align-items:flex-start;flex-wrap:wrap}
+        .item .txt{flex:1;min-inline-size:240px}
+        .item .txt .t{font-size:.95rem}
+        .item .txt .hint{font-size:.85rem;color:var(--ink-muted);margin-top:.15rem}
+        .item.state-pass .txt .t{color:var(--ink-muted)}
+        .item.state-pass{background:rgba(127,209,138,.06)}
+        .item.state-fail{background:rgba(240,115,106,.08)}
+        .item.state-skip{opacity:.7}
+
+        .badge{font-size:.65rem;letter-spacing:.08em;font-weight:800;padding:.1rem .35rem;border-radius:.3rem;vertical-align:middle;margin-right:.35rem}
+        .badge.new{background:rgba(119,209,255,.16);color:var(--aether);border:1px solid rgba(119,209,255,.4)}
+        .badge.crit{background:rgba(240,115,106,.14);color:var(--fail);border:1px solid rgba(240,115,106,.4)}
+
+        .states{display:flex;border:1px solid var(--border);border-radius:.6rem;overflow:hidden;flex:0 0 auto}
+        .states button{background:transparent;border:none;border-left:1px solid var(--border);color:var(--ink-muted);
+            padding:.4rem .8rem;cursor:pointer;font:inherit;font-size:.88rem;font-weight:600}
+        .states button:first-child{border-left:none}
+        .states button:hover{background:rgba(255,255,255,.06);color:var(--ink)}
+        .states button[aria-pressed=true].s-pass{background:var(--ok);color:#08170c;font-weight:800}
+        .states button[aria-pressed=true].s-fail{background:var(--fail);color:#220806;font-weight:800}
+        .states button[aria-pressed=true].s-skip{background:var(--skip);color:#0d1119;font-weight:800}
+
+        .note{flex-basis:100%;margin-top:.15rem}
+        .note textarea{inline-size:100%;min-block-size:64px;resize:vertical;font-size:.9rem}
+        .note .lbl{font-size:.8rem;color:var(--fail);margin-bottom:.25rem;font-weight:700}
+
+        /* ---------- misc ---------- */
+        .msg{padding:1.5rem;text-align:center;color:var(--ink-muted);font-size:.95rem}
+        .msg code{font-family:var(--mono);color:var(--gold);font-size:.85rem}
+        .msg.err{color:var(--fail)}
+        .spinner{inline-size:18px;block-size:18px;border:2px solid var(--border);border-top-color:var(--gold);
+            border-radius:50%;display:inline-block;animation:spin .8s linear infinite;vertical-align:-4px;margin-right:.5rem}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        dialog{background:var(--card);color:var(--ink);border:1px solid var(--border);border-radius:16px;padding:0;max-inline-size:780px;inline-size:92vw;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+        dialog::backdrop{background:rgba(4,6,14,.72)}
+        dialog .dhead{padding:.9rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:.75rem}
+        dialog .dhead h3{margin:0;font-size:1.05rem;color:var(--gold)}
+        dialog .dbody{padding:1rem 1.1rem}
+        dialog textarea{inline-size:100%;block-size:44vh;font-family:var(--mono);font-size:.8rem;line-height:1.5}
+        dialog .dfoot{padding:.75rem 1.1rem;border-top:1px solid var(--border);display:flex;gap:.6rem;justify-content:flex-end}
+
+        .toast{position:fixed;left:50%;bottom:2rem;transform:translateX(-50%) translateY(20px);
+            background:var(--card);border:1px solid var(--gold-2);color:var(--gold);
+            padding:.6rem 1.1rem;border-radius:.75rem;font-size:.95rem;font-weight:600;
+            opacity:0;pointer-events:none;transition:all .2s;z-index:50}
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+        @media (max-width:620px){
+            .item{flex-direction:column}
+            .states{inline-size:100%}
+            .states button{flex:1}
+        }
+    </style>
+    <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<header role="banner">
+    <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-block:.75rem">
+        <div class="brand">
+            <img class="icon icon-large" src="Echotools.png" alt="" aria-hidden="true">
+            <div>
+                <h1 class="logo">Echotools</h1>
+                <p class="subtitle">Test checklists – one tab per plugin, one list per version ✨</p>
+            </div>
+        </div>
+        <a class="btn quiet" href="index.html">Back to start page</a>
+    </div>
+</header>
+
+<main id="main" class="container" role="main" tabindex="-1">
+
+    <div class="idbar">
+        <label for="tester">Tester name</label>
+        <input type="text" id="tester" placeholder="e.g. Ren Nagasaki" autocomplete="nickname" size="22">
+        <span class="note">Keeps progress apart when several people share a browser, and appears in the report.</span>
+        <span class="who" id="whoami"></span>
+    </div>
+
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Plugins"></nav>
+    <div class="panel" id="panel">
+        <div class="msg"><span class="spinner"></span>Loading plugin list …</div>
+    </div>
+
+    <footer role="contentinfo">
+        <small>
+            © <span id="year"></span> Ren Nagasaki • Echotools • <a href="imprint.html">Imprint</a><br>
+            Checklist content comes from <code>Testing/checklist.json</code> in each plugin repo, read at the version tag.
+            Nothing is uploaded — everything stays in this browser, and you pass the report on yourself.
+        </small>
+    </footer>
+</main>
+
+<dialog id="reportDlg" aria-labelledby="reportTitle">
+    <div class="dhead"><h3 id="reportTitle">Test report</h3><span class="note" id="reportSub"></span></div>
+    <div class="dbody"><textarea id="reportText" readonly spellcheck="false"></textarea></div>
+    <div class="dfoot">
+        <button class="btn quiet" id="reportClose" type="button">Close</button>
+        <button class="btn quiet" id="reportDownload" type="button">Save as .md</button>
+        <button class="btn" id="reportCopy" type="button">Copy to clipboard</button>
+    </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Configuration
+   ============================================================ */
+const PLUGINMASTER_URL =
+  "https://raw.githubusercontent.com/RenNagasaki/MyDalamudPlugins/refs/heads/master/pluginmaster.json";
+const CHECKLIST_PATH = "Testing/checklist.json";
+const STORE_PREFIX   = "ekcl.v1";          // localStorage namespace
+const CACHE_TTL_MS   = 6 * 60 * 60 * 1000; // 6 h cache for pluginmaster / checklists
+
+/* ============================================================
+   Small helpers
+   ============================================================ */
+const $  = (sel, root = document) => root.querySelector(sel);
+const el = (tag, props = {}, ...kids) => {
+  const n = Object.assign(document.createElement(tag), props);
+  for (const k of kids) n.append(k);
+  return n;
+};
+
+function toast(text) {
+  const t = $("#toast");
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function lsGet(key, fallback = null) {
+  try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); }
+  catch { return fallback; }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota / private mode */ }
+}
+
+/** Fetch with a localStorage cache — survives GitHub rate limits and short outages. */
+async function fetchJsonCached(url, { ttl = CACHE_TTL_MS } = {}) {
+  const key = `${STORE_PREFIX}.cache.${url}`;
+  const cached = lsGet(key);
+  if (cached && (Date.now() - cached.at) < ttl) return { data: cached.data, stale: false };
+
+  try {
+    const res = await fetch(url, { cache: "no-cache" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    lsSet(key, { at: Date.now(), data });
+    return { data, stale: false };
+  } catch (e) {
+    if (cached) return { data: cached.data, stale: true };   // stale beats nothing
+    throw e;
+  }
+}
+
+/* ============================================================
+   Tester identity (without a login)
+   ------------------------------------------------------------
+   There is no reliable way to identify a browser user without a
+   login — anything in that direction is fingerprinting: unreliable,
+   actively broken by browsers, and legally awkward. So instead:
+     * a random, purely local tester id (never leaves the browser),
+     * plus a freely chosen name that separates the stored progress
+       and shows up in the report.
+   Two people on one machine simply type two names.
+   ============================================================ */
+const Tester = {
+  get id() {
+    let v = lsGet(`${STORE_PREFIX}.testerId`);
+    if (!v) {
+      v = (crypto.randomUUID?.() ?? String(Math.random()).slice(2)).slice(0, 8);
+      lsSet(`${STORE_PREFIX}.testerId`, v);
+    }
+    return v;
+  },
+  get name() { return lsGet(`${STORE_PREFIX}.testerName`, "") || ""; },
+  set name(v) { lsSet(`${STORE_PREFIX}.testerName`, v); },
+  /** Storage slot: empty name → shared default slot. */
+  get slot() {
+    return this.name.trim().toLowerCase().replace(/\s+/g, "-") || "default";
+  }
+};
+
+/* ============================================================
+   Progress storage: per tester + plugin + version
+   ============================================================ */
+function progressKey(plugin, version) {
+  return `${STORE_PREFIX}.run.${Tester.slot}.${plugin}.${version}`;
+}
+function loadProgress(plugin, version) {
+  return lsGet(progressKey(plugin, version), { items: {}, updatedAt: null });
+}
+function saveProgress(plugin, version, prog) {
+  prog.updatedAt = new Date().toISOString();
+  lsSet(progressKey(plugin, version), prog);
+}
+
+/* ============================================================
+   Loading a checklist
+   ------------------------------------------------------------
+   Tries, in order: the version tag, a v-prefixed tag, master, main.
+   Reading at the tag is the whole trick — a tag is frozen, so every
+   version automatically gets exactly the checklist that belongs to
+   it, with no version history to maintain anywhere.
+   ============================================================ */
+function repoSlug(repoUrl) {
+  const m = /github\.com\/([^/]+)\/([^/#?]+)/.exec(repoUrl || "");
+  return m ? { owner: m[1], repo: m[2].replace(/\.git$/, "") } : null;
+}
+function checklistCandidates(repoUrl, version) {
+  const slug = repoSlug(repoUrl);
+  if (!slug) return [];
+  const base = `https://raw.githubusercontent.com/${slug.owner}/${slug.repo}`;
+  return [version, `v${version}`, "master", "main"]
+    .map(ref => ({ ref, url: `${base}/${ref}/${CHECKLIST_PATH}` }));
+}
+
+async function loadChecklist(repoUrl, version) {
+  const tries = checklistCandidates(repoUrl, version);
+  if (!tries.length) throw new Error("repository URL could not be parsed");
+
+  let lastErr = null;
+  for (const t of tries) {
+    // Tags may cache for a long time (frozen), branches only briefly.
+    const isTag = t.ref === version || t.ref === `v${version}`;
+    try {
+      const { data } = await fetchJsonCached(t.url, { ttl: isTag ? 30 * 24 * 3600e3 : 15 * 60e3 });
+      return { data, ref: t.ref, exact: isTag };
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr ?? new Error("not found");
+}
+
+/** Normalises the file and assigns stable ids where none are given. */
+function normalizeChecklist(raw) {
+  const comps = Array.isArray(raw?.components) ? raw.components
+              : Array.isArray(raw?.sections)   ? [{ name: "", sections: raw.sections }]
+              : [];
+  return {
+    version: raw?.version ?? null,
+    intro: raw?.intro ?? "",
+    components: comps.map((c, ci) => ({
+      name: c.name ?? "",
+      sections: (c.sections ?? []).map((s, si) => ({
+        title: s.title ?? `Section ${si + 1}`,
+        items: (s.items ?? []).map((it, ii) => ({
+          id: it.id ?? `c${ci}.s${si}.i${ii}`,
+          text: typeof it === "string" ? it : (it.text ?? ""),
+          hint: it.hint ?? "",
+          isNew: !!(it.new ?? it.isNew),
+          critical: !!it.critical
+        }))
+      }))
+    }))
+  };
+}
+
+/* ============================================================
+   State
+   ============================================================ */
+const State = {
+  plugins: [],        // from pluginmaster.json
+  activeTab: null,    // InternalName
+  selected: {},       // InternalName -> version
+  lists: {},          // "plugin@version" -> {list, ref, exact} | {error}
+  onlyOpen: {}        // InternalName -> bool
+};
+
+const STATES = [
+  { key: "pass", label: "OK",   cls: "s-pass" },
+  { key: "fail", label: "Fail", cls: "s-fail" },
+  { key: "skip", label: "n/a",  cls: "s-skip" }
+];
+
+/** Versions of a plugin: production plus the testing one, if it differs. */
+function versionsOf(p) {
+  const out = [];
+  if (p.AssemblyVersion) out.push({ v: p.AssemblyVersion, channel: "stable" });
+  if (p.TestingAssemblyVersion && p.TestingAssemblyVersion !== p.AssemblyVersion)
+    out.push({ v: p.TestingAssemblyVersion, channel: "testing" });
+  return out;
+}
+
+function tally(list, prog) {
+  const t = { total: 0, pass: 0, fail: 0, skip: 0 };
+  for (const c of list.components) for (const s of c.sections) for (const it of s.items) {
+    t.total++;
+    const st = prog.items[it.id]?.state;
+    if (st && t[st] !== undefined) t[st]++;
+  }
+  t.open = t.total - t.pass - t.fail - t.skip;
+  return t;
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+function renderTabs() {
+  const nav = $("#tabs");
+  nav.textContent = "";
+  for (const p of State.plugins) {
+    const active = p.InternalName === State.activeTab;
+    const btn = el("button", {
+      className: "tab", type: "button", role: "tab",
+      onclick: () => { State.activeTab = p.InternalName; renderTabs(); renderPanel(); }
+    });
+    btn.setAttribute("aria-selected", String(active));
+    btn.append(p.Name ?? p.InternalName);
+
+    // Status dot from the stored progress of the selected version
+    const version = State.selected[p.InternalName];
+    const entry = State.lists[`${p.InternalName}@${version}`];
+    if (entry?.list) {
+      const t = tally(entry.list, loadProgress(p.InternalName, version));
+      const dot = el("span", { className: "dot" });
+      if (t.fail) dot.classList.add("fail");
+      else if (t.total && t.open === 0) dot.classList.add("done");
+      else if (t.pass || t.skip) dot.classList.add("part");
+      btn.append(dot);
+    }
+    nav.append(btn);
+  }
+}
+
+function renderPanel() {
+  const panel = $("#panel");
+  panel.textContent = "";
+  const p = State.plugins.find(x => x.InternalName === State.activeTab);
+  if (!p) { panel.append(el("div", { className: "msg" }, "No plugin selected.")); return; }
+
+  const vers = versionsOf(p);
+  if (!State.selected[p.InternalName] && vers.length)
+    State.selected[p.InternalName] = vers[0].v;
+  const version = State.selected[p.InternalName];
+  const channel = vers.find(x => x.v === version)?.channel ?? "stable";
+
+  /* --- toolbar: version, filter, actions --- */
+  const bar = el("div", { className: "toolbar" });
+  const sel = el("select", {
+    id: "versionSelect",
+    onchange: e => { State.selected[p.InternalName] = e.target.value; ensureList(p).then(renderAll); }
+  });
+  for (const v of vers) {
+    sel.append(el("option", {
+      value: v.v, selected: v.v === version,
+      textContent: `${v.v}  ·  ${v.channel === "testing" ? "Testing" : "Production"}`
+    }));
+  }
+  bar.append(el("label", { htmlFor: "versionSelect" }, "Version"), sel);
+  bar.append(el("span", { className: `chip ${channel}` },
+    channel === "testing" ? "Testing channel" : "Stable channel"));
+  bar.append(el("span", { className: "grow" }));
+
+  const onlyOpen = !!State.onlyOpen[p.InternalName];
+  bar.append(el("button", {
+    className: "btn quiet", type: "button",
+    textContent: onlyOpen ? "Show all" : "Only open",
+    onclick: () => { State.onlyOpen[p.InternalName] = !onlyOpen; renderPanel(); }
+  }));
+  bar.append(el("button", {
+    className: "btn quiet", type: "button", textContent: "Reset",
+    onclick: () => {
+      if (!confirm(`Really clear your progress for ${p.Name} ${version}?`)) return;
+      saveProgress(p.InternalName, version, { items: {} });
+      renderAll();
+      toast("Progress cleared");
+    }
+  }));
+  bar.append(el("button", {
+    className: "btn", type: "button", textContent: "Build report",
+    onclick: () => openReport(p, version, channel)
+  }));
+  panel.append(bar);
+
+  /* --- checklist --- */
+  const entry = State.lists[`${p.InternalName}@${version}`];
+  if (!entry) {
+    panel.append(el("div", { className: "msg" },
+      el("span", { className: "spinner" }), "Loading checklist …"));
+    return;
+  }
+  if (entry.error) {
+    const m = el("div", { className: "msg err" });
+    m.append(el("div", {}, `There is no checklist for ${p.Name} ${version} yet.`));
+    m.append(el("div", { className: "note", style: "margin-top:.5rem" },
+      "Expected ", el("code", {}, CHECKLIST_PATH),
+      ` in ${p.RepoUrl ?? "the plugin repository"} — at tag ${version}, or on master/main.`));
+    panel.append(m);
+    return;
+  }
+
+  const list = entry.list;
+  const prog = loadProgress(p.InternalName, version);
+  const t = tally(list, prog);
+
+  /* progress bar */
+  const prg = el("div", { className: "progress" });
+  const bar2 = el("div", { className: "bar" });
+  const pct = n => t.total ? (n / t.total * 100).toFixed(2) + "%" : "0%";
+  bar2.append(
+    el("i", { className: "ok",   style: `inline-size:${pct(t.pass)}` }),
+    el("i", { className: "fail", style: `inline-size:${pct(t.fail)}` }),
+    el("i", { className: "skip", style: `inline-size:${pct(t.skip)}` })
+  );
+  prg.append(bar2);
+  const counts = el("div", { className: "counts" });
+  counts.append(
+    el("span", { className: "k-ok" },   el("b", {}, String(t.pass)), " passed"),
+    el("span", { className: "k-fail" }, el("b", {}, String(t.fail)), " failed"),
+    el("span", { className: "k-skip" }, el("b", {}, String(t.skip)), " not applicable"),
+    el("span", {},                      el("b", {}, String(t.open)), " open"),
+    el("span", { className: "note" },
+      entry.exact ? `Checklist from tag ${entry.ref}`
+                  : `Checklist from ${entry.ref} (no tag ${version})`)
+  );
+  prg.append(counts);
+  panel.append(prg);
+
+  if (list.intro) panel.append(el("p", { className: "note", style: "margin:.75rem 0 0" }, list.intro));
+
+  /* components → sections → items */
+  for (const comp of list.components) {
+    const box = el("div", { className: "component" });
+    if (comp.name) box.append(el("h2", {}, comp.name));
+
+    for (const sec of comp.sections) {
+      const done = sec.items.filter(i => prog.items[i.id]?.state).length;
+      if (onlyOpen && done === sec.items.length) continue;
+
+      const d = el("details", { className: "section", open: onlyOpen || done < sec.items.length });
+      d.append(el("summary", {}, sec.title,
+        el("span", { className: "stat" }, `${done}/${sec.items.length}`)));
+
+      for (const it of sec.items) {
+        if (onlyOpen && prog.items[it.id]?.state) continue;
+        d.append(renderItem(p, version, it, prog));
+      }
+      box.append(d);
+    }
+    panel.append(box);
+  }
+}
+
+function renderItem(p, version, it, prog) {
+  const cur = prog.items[it.id] ?? {};
+  const row = el("div", { className: "item" + (cur.state ? ` state-${cur.state}` : "") });
+
+  const txt = el("div", { className: "txt" });
+  const line = el("div", { className: "t" });
+  if (it.isNew)    line.append(el("span", { className: "badge new" }, "NEW"));
+  if (it.critical) line.append(el("span", { className: "badge crit" }, "CRITICAL"));
+  line.append(it.text);
+  txt.append(line);
+  if (it.hint) txt.append(el("div", { className: "hint" }, it.hint));
+  row.append(txt);
+
+  const states = el("div", { className: "states" });
+  for (const s of STATES) {
+    const b = el("button", {
+      type: "button", className: s.cls, textContent: s.label,
+      onclick: () => {
+        const next = cur.state === s.key ? null : s.key;
+        const now = loadProgress(p.InternalName, version);
+        now.items[it.id] = { ...(now.items[it.id] ?? {}), state: next };
+        if (!next && !now.items[it.id].note) delete now.items[it.id];
+        saveProgress(p.InternalName, version, now);
+        renderAll();
+      }
+    });
+    b.setAttribute("aria-pressed", String(cur.state === s.key));
+    states.append(b);
+  }
+  row.append(states);
+
+  // Note field: always on a failure, otherwise only when something is already written
+  if (cur.state === "fail" || cur.note) {
+    const wrap = el("div", { className: "note" });
+    if (cur.state === "fail")
+      wrap.append(el("div", { className: "lbl" }, "What happened? (goes into the report as-is)"));
+    const ta = el("textarea", {
+      value: cur.note ?? "",
+      placeholder: "Steps, expected vs. actual behaviour, log excerpt …",
+      oninput: e => {
+        const now = loadProgress(p.InternalName, version);
+        now.items[it.id] = { ...(now.items[it.id] ?? {}), note: e.target.value };
+        saveProgress(p.InternalName, version, now);
+        // deliberately no renderAll() here — it would kick the caret out of the field
+      }
+    });
+    wrap.append(ta);
+    row.append(wrap);
+  }
+  return row;
+}
+
+function renderAll() { renderTabs(); renderPanel(); }
+
+/* ============================================================
+   Report
+   ============================================================ */
+function buildReport(p, version, channel) {
+  const list = State.lists[`${p.InternalName}@${version}`].list;
+  const prog = loadProgress(p.InternalName, version);
+  const t = tally(list, prog);
+  const who = Tester.name.trim() || `anonymous (${Tester.id})`;
+  const stamp = new Date().toLocaleString("en-GB");
+
+  const L = [];
+  L.push(`## ${p.Name} ${version} (${channel === "testing" ? "Testing" : "Production"})`);
+  L.push("");
+  L.push(`**Tester:** ${who}  ·  **Date:** ${stamp}`);
+  L.push(`**Result:** ${t.pass} passed · ${t.fail} failed · ${t.skip} n/a · ${t.open} open (of ${t.total})`);
+  L.push("");
+
+  const sym = { pass: "x", fail: " ", skip: "-" };
+  for (const comp of list.components) {
+    if (comp.name) { L.push(`### ${comp.name}`); L.push(""); }
+    for (const sec of comp.sections) {
+      L.push(`**${sec.title}**`);
+      for (const it of sec.items) {
+        const st = prog.items[it.id] ?? {};
+        const mark = sym[st.state] ?? " ";
+        const tags = [it.critical ? "CRITICAL" : null, it.isNew ? "NEW" : null].filter(Boolean);
+        const prefix = st.state === "fail" ? "**FAILED:** "
+                     : st.state === "skip" ? "_n/a:_ "
+                     : st.state ? "" : "_not tested:_ ";
+        L.push(`- [${mark}] ${prefix}${it.text}${tags.length ? ` _(${tags.join(", ")})_` : ""}`);
+        if (st.note?.trim())
+          for (const ln of st.note.trim().split("\n")) L.push(`      > ${ln}`);
+      }
+      L.push("");
+    }
+  }
+
+  const fails = [];
+  for (const c of list.components) for (const s of c.sections) for (const it of s.items)
+    if (prog.items[it.id]?.state === "fail") fails.push(`${s.title} — ${it.text}`);
+  if (fails.length) {
+    L.push("### Failure summary");
+    fails.forEach((f, i) => L.push(`${i + 1}. ${f}`));
+    L.push("");
+  }
+  return L.join("\n");
+}
+
+function openReport(p, version, channel) {
+  const entry = State.lists[`${p.InternalName}@${version}`];
+  if (!entry?.list) { toast("No checklist loaded"); return; }
+  $("#reportText").value = buildReport(p, version, channel);
+  $("#reportSub").textContent = `${p.Name} ${version}`;
+  const dlg = $("#reportDlg");
+  dlg.dataset.filename = `TestReport_${p.InternalName}_${version}.md`;
+  dlg.showModal();
+}
+
+/* ============================================================
+   Startup
+   ============================================================ */
+async function ensureList(p) {
+  const version = State.selected[p.InternalName];
+  const key = `${p.InternalName}@${version}`;
+  if (State.lists[key]) return;
+  try {
+    const { data, ref, exact } = await loadChecklist(p.RepoUrl, version);
+    State.lists[key] = { list: normalizeChecklist(data), ref, exact };
+  } catch (e) {
+    State.lists[key] = { error: String(e.message ?? e) };
+  }
+}
+
+async function init() {
+  $("#year").textContent = new Date().getFullYear();
+
+  // tester field
+  const nameInput = $("#tester");
+  nameInput.value = Tester.name;
+  $("#whoami").textContent = `local id ${Tester.id}`;
+  nameInput.addEventListener("input", e => {
+    Tester.name = e.target.value;      // switching the slot switches the stored progress
+    renderAll();
+  });
+
+  // report dialog
+  $("#reportClose").onclick = () => $("#reportDlg").close();
+  $("#reportCopy").onclick = async () => {
+    const text = $("#reportText").value;
+    try { await navigator.clipboard.writeText(text); toast("Report copied"); }
+    catch { $("#reportText").select(); document.execCommand("copy"); toast("Report copied"); }
+  };
+  $("#reportDownload").onclick = () => {
+    const dlg = $("#reportDlg");
+    const blob = new Blob([$("#reportText").value], { type: "text/markdown" });
+    const a = el("a", { href: URL.createObjectURL(blob), download: dlg.dataset.filename || "TestReport.md" });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+
+  // plugin list
+  try {
+    const { data, stale } = await fetchJsonCached(PLUGINMASTER_URL, { ttl: 30 * 60e3 });
+    State.plugins = (Array.isArray(data) ? data : []).filter(p => p.InternalName);
+    if (stale) toast("GitHub unreachable — showing the cached plugin list");
+  } catch (e) {
+    $("#panel").textContent = "";
+    $("#panel").append(el("div", { className: "msg err" },
+      `The plugin list could not be loaded: ${e.message}`));
+    return;
+  }
+  if (!State.plugins.length) {
+    $("#panel").textContent = "";
+    $("#panel").append(el("div", { className: "msg" }, "No plugins listed in pluginmaster.json."));
+    return;
+  }
+
+  State.activeTab = State.plugins[0].InternalName;
+  for (const p of State.plugins) {
+    const v = versionsOf(p);
+    if (v.length) State.selected[p.InternalName] = v[0].v;
+  }
+  renderAll();
+
+  // fetch every checklist in the background so the tab dots are meaningful
+  for (const p of State.plugins) ensureList(p).then(renderAll);
+}
+
+init();
+</script>
+</body>
+</html>
