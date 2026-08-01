@@ -109,6 +109,7 @@
         .chip{font-size:.75rem;padding:.15rem .6rem;border-radius:999px;border:1px solid var(--border);color:var(--ink-muted);font-weight:700;letter-spacing:.03em}
         .chip.testing{border-color:var(--aether);color:var(--aether)}
         .chip.stable{border-color:var(--ok);color:var(--ok)}
+        .chip.dev{border-color:var(--gold-2);color:var(--gold)}
 
         /* ---------- progress ---------- */
         .progress{margin-block:1rem .25rem}
@@ -245,6 +246,7 @@
 const PLUGINMASTER_URL =
   "https://raw.githubusercontent.com/RenNagasaki/MyDalamudPlugins/refs/heads/master/pluginmaster.json";
 const CHECKLIST_PATH = "Testing/checklist.json";
+const BRANCHES       = ["master", "main"];  // default branch, in the order we probe it
 const STORE_PREFIX   = "ekcl.v1";          // localStorage namespace
 const CACHE_TTL_MS   = 6 * 60 * 60 * 1000; // 6 h cache for pluginmaster / checklists
 
@@ -346,16 +348,23 @@ function repoSlug(repoUrl) {
   const m = /github\.com\/([^/]+)\/([^/#?]+)/.exec(repoUrl || "");
   return m ? { owner: m[1], repo: m[2].replace(/\.git$/, "") } : null;
 }
-function checklistCandidates(repoUrl, version) {
+function checklistUrl(repoUrl, ref) {
   const slug = repoSlug(repoUrl);
-  if (!slug) return [];
-  const base = `https://raw.githubusercontent.com/${slug.owner}/${slug.repo}`;
-  return [version, `v${version}`, "master", "main"]
-    .map(ref => ({ ref, url: `${base}/${ref}/${CHECKLIST_PATH}` }));
+  return slug
+    ? `https://raw.githubusercontent.com/${slug.owner}/${slug.repo}/${ref}/${CHECKLIST_PATH}`
+    : null;
+}
+function checklistCandidates(repoUrl, version) {
+  if (!repoSlug(repoUrl)) return [];
+  return [version, `v${version}`, ...BRANCHES]
+    .map(ref => ({ ref, url: checklistUrl(repoUrl, ref) }));
 }
 
-async function loadChecklist(repoUrl, version) {
-  const tries = checklistCandidates(repoUrl, version);
+async function loadChecklist(repoUrl, version, branchRef = null) {
+  // A development version only exists on the branch — no point in probing tags.
+  const tries = branchRef
+    ? [{ ref: branchRef, url: checklistUrl(repoUrl, branchRef) }]
+    : checklistCandidates(repoUrl, version);
   if (!tries.length) throw new Error("repository URL could not be parsed");
 
   let lastErr = null;
@@ -402,8 +411,40 @@ const State = {
   activeTab: null,    // InternalName
   selected: {},       // InternalName -> version
   lists: {},          // "plugin@version" -> {list, ref, exact} | {error}
-  onlyOpen: {}        // InternalName -> bool
+  onlyOpen: {},       // InternalName -> bool
+  dev: {}             // InternalName -> {version, ref} — unreleased checklist on the branch
 };
+
+/** Compares dotted version numbers segment by segment. Missing segments count as 0. */
+function cmpVersion(a, b) {
+  const pa = String(a).split("."), pb = String(b).split(".");
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = parseInt(pa[i] ?? "0", 10) || 0;
+    const y = parseInt(pb[i] ?? "0", 10) || 0;
+    if (x !== y) return x < y ? -1 : 1;
+  }
+  return 0;
+}
+
+/**
+ * Looks at the checklist on the default branch. If it declares a version higher
+ * than every released one, that version is offered as a third "Development"
+ * channel — this is the checklist for a build that is not out yet.
+ */
+async function probeDevVersion(p) {
+  if (!repoSlug(p.RepoUrl)) return;
+  for (const ref of BRANCHES) {
+    let data;
+    try {
+      ({ data } = await fetchJsonCached(checklistUrl(p.RepoUrl, ref), { ttl: 15 * 60e3 }));
+    } catch { continue; }                       // branch does not exist / no file → try the next
+    const v = data?.version;
+    if (!v) return;                             // file exists but declares no version
+    if (releasedVersions(p).every(r => cmpVersion(v, r.v) > 0))
+      State.dev[p.InternalName] = { version: String(v), ref };
+    return;                                     // the first branch that answers decides
+  }
+}
 
 const STATES = [
   { key: "pass", label: "OK",   cls: "s-pass" },
@@ -411,14 +452,26 @@ const STATES = [
   { key: "skip", label: "n/a",  cls: "s-skip" }
 ];
 
-/** Versions of a plugin: production plus the testing one, if it differs. */
-function versionsOf(p) {
+/** Released versions from pluginmaster.json: production plus testing, if it differs. */
+function releasedVersions(p) {
   const out = [];
   if (p.AssemblyVersion) out.push({ v: p.AssemblyVersion, channel: "stable" });
   if (p.TestingAssemblyVersion && p.TestingAssemblyVersion !== p.AssemblyVersion)
     out.push({ v: p.TestingAssemblyVersion, channel: "testing" });
   return out;
 }
+
+/** Everything selectable: the released versions plus an unreleased branch version. */
+function versionsOf(p) {
+  const out = releasedVersions(p);
+  const dev = State.dev[p.InternalName];
+  if (dev && !out.some(x => x.v === dev.version))
+    out.push({ v: dev.version, channel: "dev", ref: dev.ref });
+  return out;
+}
+
+const CHANNEL_LABEL = { stable: "Production", testing: "Testing", dev: "Development" };
+const CHANNEL_CHIP  = { stable: "Stable channel", testing: "Testing channel", dev: "Not released yet" };
 
 function tally(list, prog) {
   const t = { total: 0, pass: 0, fail: 0, skip: 0 };
@@ -482,12 +535,11 @@ function renderPanel() {
   for (const v of vers) {
     sel.append(el("option", {
       value: v.v, selected: v.v === version,
-      textContent: `${v.v}  ·  ${v.channel === "testing" ? "Testing" : "Production"}`
+      textContent: `${v.v}  ·  ${CHANNEL_LABEL[v.channel]}`
     }));
   }
   bar.append(el("label", { htmlFor: "versionSelect" }, "Version"), sel);
-  bar.append(el("span", { className: `chip ${channel}` },
-    channel === "testing" ? "Testing channel" : "Stable channel"));
+  bar.append(el("span", { className: `chip ${channel}` }, CHANNEL_CHIP[channel]));
   bar.append(el("span", { className: "grow" }));
 
   const onlyOpen = !!State.onlyOpen[p.InternalName];
@@ -549,8 +601,9 @@ function renderPanel() {
     el("span", { className: "k-skip" }, el("b", {}, String(t.skip)), " not applicable"),
     el("span", {},                      el("b", {}, String(t.open)), " open"),
     el("span", { className: "note" },
-      entry.exact ? `Checklist from tag ${entry.ref}`
-                  : `Checklist from ${entry.ref} (no tag ${version})`)
+      channel === "dev" ? `Checklist from branch ${entry.ref} — this build is not released yet`
+      : entry.exact     ? `Checklist from tag ${entry.ref}`
+                        : `Checklist from ${entry.ref} (no tag ${version})`)
   );
   prg.append(counts);
   panel.append(prg);
@@ -645,7 +698,7 @@ function buildReport(p, version, channel) {
   const stamp = new Date().toLocaleString("en-GB");
 
   const L = [];
-  L.push(`## ${p.Name} ${version} (${channel === "testing" ? "Testing" : "Production"})`);
+  L.push(`## ${p.Name} ${version} (${CHANNEL_LABEL[channel] ?? channel})`);
   L.push("");
   L.push(`**Tester:** ${who}  ·  **Date:** ${stamp}`);
   L.push(`**Result:** ${t.pass} passed · ${t.fail} failed · ${t.skip} n/a · ${t.open} open (of ${t.total})`);
@@ -699,8 +752,10 @@ async function ensureList(p) {
   const version = State.selected[p.InternalName];
   const key = `${p.InternalName}@${version}`;
   if (State.lists[key]) return;
+  const dev = State.dev[p.InternalName];
+  const branchRef = dev && dev.version === version ? dev.ref : null;
   try {
-    const { data, ref, exact } = await loadChecklist(p.RepoUrl, version);
+    const { data, ref, exact } = await loadChecklist(p.RepoUrl, version, branchRef);
     State.lists[key] = { list: normalizeChecklist(data), ref, exact };
   } catch (e) {
     State.lists[key] = { error: String(e.message ?? e) };
@@ -758,8 +813,11 @@ async function init() {
   }
   renderAll();
 
-  // fetch every checklist in the background so the tab dots are meaningful
-  for (const p of State.plugins) ensureList(p).then(renderAll);
+  // Look for an unreleased checklist on the branch, then fetch every selected
+  // checklist in the background so the version list and the tab dots are complete.
+  for (const p of State.plugins) {
+    probeDevVersion(p).then(() => ensureList(p)).then(renderAll);
+  }
 }
 
 init();
