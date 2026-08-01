@@ -433,17 +433,24 @@ function cmpVersion(a, b) {
  */
 async function probeDevVersion(p) {
   if (!repoSlug(p.RepoUrl)) return;
+
+  // Check every candidate branch and keep the highest version, rather than
+  // trusting the first one that answers: a repo can carry both, e.g. an active
+  // main plus a stale master left over from a mirror, and picking by order
+  // would then serve the outdated checklist.
+  let best = null;
   for (const ref of BRANCHES) {
     let data;
     try {
       ({ data } = await fetchJsonCached(checklistUrl(p.RepoUrl, ref), { ttl: 15 * 60e3 }));
-    } catch { continue; }                       // branch does not exist / no file → try the next
+    } catch { continue; }                       // branch or file does not exist
     const v = data?.version;
-    if (!v) return;                             // file exists but declares no version
-    if (releasedVersions(p).every(r => cmpVersion(v, r.v) > 0))
-      State.dev[p.InternalName] = { version: String(v), ref };
-    return;                                     // the first branch that answers decides
+    if (!v) continue;                           // file exists but declares no version
+    if (!best || cmpVersion(v, best.version) > 0) best = { version: String(v), ref };
   }
+
+  if (best && releasedVersions(p).every(r => cmpVersion(best.version, r.v) > 0))
+    State.dev[p.InternalName] = best;
 }
 
 const STATES = [
