@@ -246,7 +246,7 @@
 const PLUGINMASTER_URL =
   "https://raw.githubusercontent.com/RenNagasaki/MyDalamudPlugins/refs/heads/master/pluginmaster.json";
 const CHECKLIST_PATH = "Testing/checklist.json";
-const BRANCHES       = ["master", "main"];  // default branch, in the order we probe it
+const BRANCHES       = ["master", "main"];  // default branch — probed ONLY for the Development channel
 const STORE_PREFIX   = "ekcl.v1";          // localStorage namespace
 const CACHE_TTL_MS   = 6 * 60 * 60 * 1000; // 6 h cache for pluginmaster / checklists
 
@@ -339,10 +339,14 @@ function saveProgress(plugin, version, prog) {
 /* ============================================================
    Loading a checklist
    ------------------------------------------------------------
-   Tries, in order: the version tag, a v-prefixed tag, master, main.
-   Reading at the tag is the whole trick — a tag is frozen, so every
-   version automatically gets exactly the checklist that belongs to
-   it, with no version history to maintain anywhere.
+   A released version is read ONLY from its own tag ("<version>" or
+   "v<version>") — never from a branch. Reading at the tag is the whole
+   trick: a tag is frozen, so every version automatically gets exactly
+   the checklist that belongs to it, with no version history to maintain
+   anywhere. A branch moves, so a branch fallback would silently hand the
+   tester a checklist for a different build than the one they installed —
+   worse than showing none. The only branch read is the explicit
+   "Development" channel, which is by definition the branch state.
    ============================================================ */
 function repoSlug(repoUrl) {
   const m = /github\.com\/([^/]+)\/([^/#?]+)/.exec(repoUrl || "");
@@ -356,7 +360,7 @@ function checklistUrl(repoUrl, ref) {
 }
 function checklistCandidates(repoUrl, version) {
   if (!repoSlug(repoUrl)) return [];
-  return [version, `v${version}`, ...BRANCHES]
+  return [version, `v${version}`]
     .map(ref => ({ ref, url: checklistUrl(repoUrl, ref) }));
 }
 
@@ -373,7 +377,7 @@ async function loadChecklist(repoUrl, version, branchRef = null) {
     const isTag = t.ref === version || t.ref === `v${version}`;
     try {
       const { data } = await fetchJsonCached(t.url, { ttl: isTag ? 30 * 24 * 3600e3 : 15 * 60e3 });
-      return { data, ref: t.ref, exact: isTag };
+      return { data, ref: t.ref };
     } catch (e) { lastErr = e; }
   }
   throw lastErr ?? new Error("not found");
@@ -410,7 +414,7 @@ const State = {
   plugins: [],        // from pluginmaster.json
   activeTab: null,    // InternalName
   selected: {},       // InternalName -> version
-  lists: {},          // "plugin@version" -> {list, ref, exact} | {error}
+  lists: {},          // "plugin@version" -> {list, ref} | {error}
   onlyOpen: {},       // InternalName -> bool
   dev: {}             // InternalName -> {version, ref} — unreleased checklist on the branch
 };
@@ -582,7 +586,9 @@ function renderPanel() {
     m.append(el("div", {}, `There is no checklist for ${p.Name} ${version} yet.`));
     m.append(el("div", { className: "note", style: "margin-top:.5rem" },
       "Expected ", el("code", {}, CHECKLIST_PATH),
-      ` in ${p.RepoUrl ?? "the plugin repository"} — at tag ${version}, or on master/main.`));
+      ` in ${p.RepoUrl ?? "the plugin repository"} — at tag `, el("code", {}, version),
+      " or ", el("code", {}, `v${version}`),
+      ". Only the tag of this exact version is used, so that the checklist always matches the build."));
     panel.append(m);
     return;
   }
@@ -609,8 +615,7 @@ function renderPanel() {
     el("span", {},                      el("b", {}, String(t.open)), " open"),
     el("span", { className: "note" },
       channel === "dev" ? `Checklist from branch ${entry.ref} — this build is not released yet`
-      : entry.exact     ? `Checklist from tag ${entry.ref}`
-                        : `Checklist from ${entry.ref} (no tag ${version})`)
+                        : `Checklist from tag ${entry.ref}`)
   );
   prg.append(counts);
   panel.append(prg);
@@ -762,8 +767,8 @@ async function ensureList(p) {
   const dev = State.dev[p.InternalName];
   const branchRef = dev && dev.version === version ? dev.ref : null;
   try {
-    const { data, ref, exact } = await loadChecklist(p.RepoUrl, version, branchRef);
-    State.lists[key] = { list: normalizeChecklist(data), ref, exact };
+    const { data, ref } = await loadChecklist(p.RepoUrl, version, branchRef);
+    State.lists[key] = { list: normalizeChecklist(data), ref };
   } catch (e) {
     State.lists[key] = { error: String(e.message ?? e) };
   }
